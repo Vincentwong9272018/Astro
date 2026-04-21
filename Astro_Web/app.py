@@ -99,7 +99,7 @@ def calculate_chart_pack(jd, lat, lon, orb_map):
                     "出/入相": asp['狀態'], "容許度": asp['容許度']
                 })
                 
-    return p_data, all_asps, p_pos, ascmc, cusps, r_labels
+    return p_data, all_asps, p_pos, p_spd, ascmc, cusps, r_labels
 
 def get_solar_arc_aspects(jd_natal, jd_transit, natal_p_pos, r_labels):
     age_years = (jd_transit - jd_natal) / 365.2422
@@ -328,9 +328,9 @@ try:
             current_orbs = {"合相": orb_h, "對相": orb_h, "三分": orb_t, "四分": orb_t, "六分": orb_s}
 
         # 計算本命與日返盤
-        n_p_data, n_asps, n_draw_pos, n_ascmc, n_cusps, n_r_labels = calculate_chart_pack(jd_natal, loc.latitude, loc.longitude, current_orbs)
+        n_p_data, n_asps, n_draw_pos, n_p_spd, n_ascmc, n_cusps, n_r_labels = calculate_chart_pack(jd_natal, loc.latitude, loc.longitude, current_orbs)
         jd_sr = get_solar_return_jd(jd_natal, ty, n_draw_pos['太陽'])
-        sr_p_data, sr_asps, sr_draw_pos, sr_ascmc, sr_cusps, sr_r_labels = calculate_chart_pack(jd_sr, t_loc.latitude, t_loc.longitude, current_orbs)
+        sr_p_data, sr_asps, sr_draw_pos, sr_p_spd, sr_ascmc, sr_cusps, sr_r_labels = calculate_chart_pack(jd_sr, t_loc.latitude, t_loc.longitude, current_orbs)
         
         # 計算流運日弧
         sa_aspects = get_solar_arc_aspects(jd_natal, jd_transit, n_draw_pos, n_r_labels)
@@ -351,7 +351,6 @@ try:
 
         # ================= 分頁數據區 =================
         st.divider()
-        # 加入「流運日弧」分頁在日返盤與複製AI中間
         tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🪐 本命盤", "☀️ 日返盤", "☀️ 流運日弧", "📋 複製給 AI", "🏛️ 希臘七大點", "🌳 中點樹", "⏳ 預測與流運"])
         
         with tab1:
@@ -408,7 +407,6 @@ try:
                 ai_text += "\n流運日弧：\n"
                 if sa_aspects:
                     for a in sa_aspects:
-                        # 【修正格式】 SA + 宮主星 + 行星名稱
                         p1_clean = a['行星A'].replace('SA ', '')
                         p2_clean = a['行星B'].replace('本命 ', '')
                         ai_text += f"SA{a['宮主星A']}{p1_clean}{a['相位']}本命{a['宮主星B']}{p2_clean}{a['出/入相']}{a['容許度'].replace('°', '')}°\n"
@@ -420,6 +418,44 @@ try:
                 l1_format = zr_l1_str.replace(" (", "（").replace(")", "）")
                 l2_format = zr_l2_str.replace(" (", "（").replace(")", "）")
                 ai_text += f"黃道釋放：\nLevel 1 ：{l1_format}\nLevel 2：{l2_format}\n"
+                
+                # --- 新增 Transit (流運) 區塊 ---
+                ai_text += "\nTransit：\n"
+                t_pos, t_spd = {}, {}
+                t_planets_id = {"太陽": swe.SUN, "月亮": swe.MOON, "水星": swe.MERCURY, "金星": swe.VENUS, "火星": swe.MARS, "木星": swe.JUPITER, "土星": swe.SATURN, "天王星": swe.URANUS, "海王星": swe.NEPTUNE, "冥王星": swe.PLUTO}
+                
+                for name, pid in t_planets_id.items():
+                    res, _ = swe.calc_ut(jd_transit, pid)
+                    t_pos[name] = res[0]
+                    t_spd[name] = res[3]
+                    
+                for p in t_planets_id.keys():
+                    t_h = get_natal_house(t_pos[p], n_cusps)
+                    sign_str = format_pos(t_pos[p]).split(' ')[0]
+                    ai_text += f"{p}：{sign_str} 本命{t_h}宮\n"
+                    
+                has_t_asp = False
+                specs = [(0, "合相"), (180, "對相"), (120, "三分"), (90, "四分"), (60, "六分")]
+                for t_p, t_lon in t_pos.items():
+                    t_h = get_natal_house(t_lon, n_cusps)
+                    for n_p in t_planets_id.keys():
+                        n_lon = n_draw_pos[n_p]
+                        diff = abs(t_lon - n_lon)
+                        if diff > 180: diff = 360 - diff
+                        for angle, asp_name in specs:
+                            err = abs(diff - angle)
+                            if err <= 1.0:
+                                t_next = (t_lon + t_spd[t_p]*0.001) % 360
+                                n_next = (n_lon + n_p_spd[n_p]*0.001) % 360
+                                diff_next = abs(t_next - n_next)
+                                if diff_next > 180: diff_next = 360 - diff_next
+                                state = "入相" if abs(diff_next - angle) < err else "出相"
+                                n_h = get_natal_house(n_lon, n_cusps)
+                                ai_text += f"{t_p}{t_h}宮{asp_name}{n_p}{n_h}宮{state}{err:.2f}°\n"
+                                has_t_asp = True
+                
+                if not has_t_asp:
+                    ai_text += "無 1° 內精確相位\n"
 
             st.code(ai_text, language="plaintext")
 
