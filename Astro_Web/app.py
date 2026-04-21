@@ -101,6 +101,7 @@ def calculate_chart_pack(jd, lat, lon, orb_map):
                 
     return p_data, all_asps, p_pos, p_spd, ascmc, cusps, r_labels
 
+# 【重點更新】太陽弧專屬相位計算 (只算 0, 45, 90, 135, 180，鎖定 1度 容許度)
 def get_solar_arc_aspects(jd_natal, jd_transit, natal_p_pos, r_labels):
     age_years = (jd_transit - jd_natal) / 365.2422
     jd_prog = jd_natal + age_years
@@ -110,7 +111,8 @@ def get_solar_arc_aspects(jd_natal, jd_transit, natal_p_pos, r_labels):
     arc = sun_p[0] - sun_n[0]
     
     sa_aspects = []
-    specs = [(0, "合相"), (180, "對相"), (120, "三分"), (90, "四分"), (60, "六分")]
+    # 專屬硬相位列表
+    specs = [(0, "合相"), (45, "半四分"), (90, "四分"), (135, "補八分"), (180, "對相")]
     
     names = [k for k in natal_p_pos.keys() if k not in ["上升", "中天", "北交點"]]
     for p1 in names:
@@ -125,7 +127,7 @@ def get_solar_arc_aspects(jd_natal, jd_transit, natal_p_pos, r_labels):
             
             for angle, name in specs:
                 err = abs(diff - angle)
-                if err <= 1.0: 
+                if err <= 1.0: # 嚴格鎖定 1 度容許度
                     sa_next = (pos1 + arc + 0.001) % 360
                     diff_next = abs(sa_next - pos2)
                     if diff_next > 180: diff_next = 360 - diff_next
@@ -371,14 +373,14 @@ try:
 
         with tab3:
             st.subheader("☀️ 流運日弧相位表 (Solar Arc Directions)")
-            st.caption("真實日弧計算，與本命盤形成精確相位 (容許度 1°)")
+            st.caption("真實日弧計算，只顯示 0°, 45°, 90°, 135°, 180° 相位 (精確容許度 1°)")
             if sa_aspects:
                 df_sa = pd.DataFrame(sa_aspects)
                 if focus_p != "顯示全部":
                     df_sa = df_sa[(df_sa['行星A'].str.contains(focus_p)) | (df_sa['行星B'].str.contains(focus_p))]
                 st.dataframe(df_sa, use_container_width=True, hide_index=True)
             else:
-                st.info("目前無 1° 內的精確日弧相位。")
+                st.info("目前無 1° 內的精確硬相位日弧。")
 
         with tab4:
             st.subheader("💡 選擇生成模式並點擊右上角複製")
@@ -399,7 +401,6 @@ try:
             if ai_mode == "包含流運與預測":
                 _, zr_l1_str, zr_l2_str = get_zr_table(lots_raw['精神點 (Spirit)'], base_birth_dt, age_exact)
                 
-                # 【新增】流運日期
                 ai_text += f"\n流運日期：{t_date_in}.{t_time_in[:2]}:{t_time_in[2:]}\n"
                 
                 ai_text += "\n日返盤：\n"
