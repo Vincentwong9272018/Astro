@@ -1,0 +1,7 @@
+streamlit
+pyswisseph
+geopy
+timezonefinder
+pytz
+matplotlib
+numpy
