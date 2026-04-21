@@ -398,6 +398,10 @@ try:
             
             if ai_mode == "包含流運與預測":
                 _, zr_l1_str, zr_l2_str = get_zr_table(lots_raw['精神點 (Spirit)'], base_birth_dt, age_exact)
+                
+                # 【新增】流運日期
+                ai_text += f"\n流運日期：{t_date_in}.{t_time_in[:2]}:{t_time_in[2:]}\n"
+                
                 ai_text += "\n日返盤：\n"
                 for p in sr_p_data: 
                     ai_text += f"{p['宮主星']}{p['星體']}：{p['星座'].split(' ')[0]}{p['宮位'].replace('第 ', '').replace(' 宮', '宮')}\n"
@@ -419,7 +423,6 @@ try:
                 l2_format = zr_l2_str.replace(" (", "（").replace(")", "）")
                 ai_text += f"黃道釋放：\nLevel 1 ：{l1_format}\nLevel 2：{l2_format}\n"
                 
-                # --- 新增 Transit (流運) 區塊 ---
                 ai_text += "\nTransit：\n"
                 t_pos, t_spd = {}, {}
                 t_planets_id = {"太陽": swe.SUN, "月亮": swe.MOON, "水星": swe.MERCURY, "金星": swe.VENUS, "火星": swe.MARS, "木星": swe.JUPITER, "土星": swe.SATURN, "天王星": swe.URANUS, "海王星": swe.NEPTUNE, "冥王星": swe.PLUTO}
