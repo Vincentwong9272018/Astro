@@ -436,10 +436,11 @@ try:
 
                 st.markdown("### ☯️ 本命八字")
                 bazi_cols = st.columns(4)
-                bazi_cols[0].metric("時柱", bazi.getTimeGanZhi())
-                bazi_cols[1].metric("日柱", bazi.getDayGanZhi())
-                bazi_cols[2].metric("月柱", bazi.getMonthGanZhi())
-                bazi_cols[3].metric("年柱", bazi.getYearGanZhi())
+                # 修正這裡的取值方法
+                bazi_cols[0].metric("時柱", bazi.getTime())
+                bazi_cols[1].metric("日柱", bazi.getDay())
+                bazi_cols[2].metric("月柱", bazi.getMonth())
+                bazi_cols[3].metric("年柱", bazi.getYear())
 
                 st.divider()
                 st.markdown(f"### 🌊 八個大運與流年 (起運：{yun.getStartAge()}歲 / {yun.getStartYear()}年)")
@@ -554,7 +555,8 @@ try:
                     yun_obj = bazi_obj.getYun(1 if gender_in == "男" else 0)
                     
                     ai_text += "\n【東方八字命理】\n"
-                    ai_text += f"本命八字：{bazi_obj.getYearGanZhi()}年 {bazi_obj.getMonthGanZhi()}月 {bazi_obj.getDayGanZhi()}日 {bazi_obj.getTimeGanZhi()}時\n"
+                    # 修正這裡的取值方法
+                    ai_text += f"本命八字：{bazi_obj.getYear()}年 {bazi_obj.getMonth()}月 {bazi_obj.getDay()}日 {bazi_obj.getTime()}時\n"
                     ai_text += f"起運時間：{yun_obj.getStartAge()}歲 ({yun_obj.getStartYear()}年)\n"
                     
                     ai_text += "\n八個大運與流年：\n"
@@ -564,7 +566,8 @@ try:
                         ai_text += f"   流年: {', '.join(lns)}\n"
                         
                     current_solar = Solar.fromYmdHms(ty, int(t_date_in[4:6]), int(t_date_in[6:8]), int(t_time_in[:2]), int(t_time_in[2:]), 0)
-                    ai_text += f"\n當前流運年份 (流年)：{ty}年 ({current_solar.getLunar().getYearGanZhi()}年)\n"
+                    # 修正農曆年份干支的取值方法
+                    ai_text += f"\n當前流運年份 (流年)：{ty}年 ({current_solar.getLunar().getYearInGanZhi()}年)\n"
                 except Exception as e:
                     ai_text += f"\n八字資訊計算失敗: {e}\n"
 
