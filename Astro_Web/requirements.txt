@@ -1,7 +1,7 @@
 streamlit
-pyswisseph
+swisseph
+pytz
+pandas
 geopy
 timezonefinder
-pytz
-matplotlib
-numpy
+lunar_python
