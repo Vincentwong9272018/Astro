@@ -467,7 +467,7 @@ try:
             except Exception as e:
                 st.error(f"八字計算發生錯誤: {e}")
 
-        # ================= 核心字串產生器 (安全換行) =================
+        # ================= 核心字串產生器 =================
         def get_data_string(mode):
             txt = f"【基本資料】\n性別：{gender_in}\n出生時間：{y}年{m}月{d}日 {h:02d}:{mi:02d}\n出生地點：{loc_in}\n\n"
             
@@ -598,8 +598,9 @@ try:
                         try:
                             # 初始化 Gemini 模型
                             genai.configure(api_key=gemini_key)
-                            # 推薦使用 gemini-1.5-pro 處理複雜邏輯與長文本
-                            model = genai.GenerativeModel('gemini-1.5-pro-latest')
+                            
+                            # 【核心修正】使用全球最通用的 gemini-pro 模型，徹底避免 404 報錯
+                            model = genai.GenerativeModel('gemini-pro')
                             
                             if ai_option == "1. 本命全方位格局分析":
                                 prompt = (
@@ -645,7 +646,7 @@ try:
                             if response and hasattr(response, 'text') and response.text:
                                 st.markdown(response.text)
                             else:
-                                st.error("⚠️ API 請求成功，但未能產生文字（可能觸發了安全過濾機制）。")
+                                st.error(f"⚠️ API 請求成功，但未能產生文字。原始錯誤: {response}")
                                 
                         except Exception as e:
                             st.error(f"⚠️ Gemini API 分析發生錯誤：{e}")
