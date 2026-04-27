@@ -288,20 +288,125 @@ try:
                 dy_list.append({"大運": dy.getGanZhi(), "起運歲數": f"{dy.getStartAge()}歲", "起運年份": f"{dy.getStartYear()}年", "流年": lns})
             st.dataframe(pd.DataFrame(dy_list), use_container_width=True, hide_index=True)
 
-        # --- 核心邏輯：數據字串化 (供 AI & 複製使用) ---
+        # ================= 核心邏輯修正區：數據字串化 (安全換行版) =================
         def get_data_string(mode):
             # mode: 1 (本命), 2 (全部)
             txt = f"【基本資料】\n性別：{gender_in}\n出生時間：{y}年{m}月{d}日 {h:02d}:{mi:02d}\n出生地點：{loc_in}\n"
+            
             try:
-                sb = Solar.fromYmdHms(y, m, d, h, mi, 0); bz = sb.getLunar().getEightChar()
+                sb = Solar.fromYmdHms(y, m, d, h, mi, 0)
+                bz = sb.getLunar().getEightChar()
                 txt += f"【八字命理】{bz.getYear()}年 {bz.getMonth()}月 {bz.getDay()}日 {bz.getTime()}時\n\n"
-            except: pass
+            except: 
+                pass
+            
             txt += "【占星本命盤】\n"
-            for p in n_p_data: txt += f"{p['星體']}：{p['星座'].split(' ')[0]} {p['宮位']}\n"
-            for a in n_asps: txt += f"{a['行星A']}{a['相位']}{a['行星B']} {a['出/入相']}{a['容許度']}\n"
+            for p in n_p_data: 
+                txt += f"{p['星體']}：{p['星座'].split(' ')[0]} {p['宮位']}\n"
+                
+            for a in n_asps: 
+                txt += f"{a['行星A']}{a['相位']}{a['行星B']} {a['出/入相']}{a['容許度']}\n"
+                
             txt += "\n【中點樹】\n"
-            for t in trees: txt += f"{t['星體 (A)']}={t['中點組合 (B/C)']}\n"
+            for t in trees: 
+                txt += f"{t['星體 (A)']}={t['中點組合 (B/C)']}\n"
             
             if mode == 2:
                 _, zr_l1, zr_l2 = get_zr_table(lots_raw['精神點 (Spirit)'], base_birth_dt, age_exact)
-                txt += f"\n【流運與預測】\n流運日期：{t_date_in}\n小限：{prof_sign}年，主星 {prof_ruler}\
+                txt += "\n【流運與預測】\n"
+                txt += f"流運日期：{t_date_in}\n"
+                txt += f"小限：{prof_sign}年，主星 {prof_ruler}\n"
+                txt += f"法達：{f_maj}-{f_sub}\n"
+                txt += f"黃道釋放(Spirit)：L1-{zr_l1}, L2-{zr_l2}\n"
+                
+                txt += "\n【日返盤】\n"
+                for p in sr_p_data: 
+                    txt += f"{p['星體']}：{p['星座'].split(' ')[0]} {p['宮位']}\n"
+                    
+                txt += "\n【流運日弧】\n"
+                for a in sa_aspects: 
+                    txt += f"{a['行星A']}{a['相位']}{a['行星B']} {a['出/入相']}\n"
+                    
+                txt += "\n【八字大運流年】\n"
+                dy_now = [dy for dy in da_yuns if dy.getStartYear() <= int(t_date_in[:4]) < dy.getStartYear()+10]
+                if dy_now: 
+                    txt += f"目前大運：{dy_now[0].getGanZhi()}\n"
+                    txt += f"流年：{t_date_in[:4]}年\n"
+                    
+            return txt
+
+        # --- 📋 複製給 AI 分頁 ---
+        with tabs[4]:
+            ai_copy_mode = st.radio("複製模式", ["僅限本命盤數據", "包含占星及八字數據"], horizontal=True)
+            st.code(get_data_string(1 if ai_copy_mode == "僅限本命盤數據" else 2), language="plaintext")
+
+        # --- 🤖 AI 命理分析分頁 (Grok 版) ---
+        with tabs[3]:
+            st.markdown("### 🤖 AI 智慧命理諮詢 (Powered by Grok)")
+            if not grok_key:
+                st.warning("請先在側邊欄輸入 Grok API Key 才能使用 AI 分析功能。")
+            else:
+                ai_option = st.radio("請選擇分析類型", ["1. 本命全方位格局分析", "2. 年度決策精算報告"], horizontal=True)
+                
+                if st.button("🚀 開始 AI 分析"):
+                    with st.spinner("Grok 正在研讀你的命盤數據，請稍候..."):
+                        try:
+                            # 初始化 xAI 的 Grok 客戶端
+                            client = OpenAI(
+                                api_key=grok_key,
+                                base_url="https://api.xai.com/v1",
+                            )
+                            
+                            if ai_option == "1. 本命全方位格局分析":
+                                system_prompt = "你是一位精通東方傳統「子平八字」與西方「現代占星學」的資深命理大師。你擅長揉合東西方命理精髓，透過八字的五行能量與占星的行星相位，為客戶提供既有哲學深度又具備實際指導意義的人生解讀。"
+                                user_prompt = (
+                                    "**任務 (Task)：** 請根據以下提供的客戶出生資訊，進行一次全方位的「一生整體格局解讀」。你需要識別命盤中的核心矛盾、天賦潛能、以及人生各階段的重要轉折點。\n\n"
+                                    "**情境與細節 (Context)：**\n"
+                                    "1. 解讀對象為我的客戶，請保持專業、中立且富有同理心的口吻。\n"
+                                    "2. 分析須兼顧八字的格局與占星的重要配置。\n"
+                                    "3. 若八字與占星的結論一致，請加強說明；若有衝突，請以專業角度解釋能量的拉扯與應對建議。\n\n"
+                                    "**輸出格式 (Format)：**\n"
+                                    "請以「結構化報告」形式呈現，並嚴格包含以下五個章節：\n"
+                                    "1. **核心格局：** 簡述八字日元特質及占星命主星影響（定調人生底色）。\n"
+                                    "2. **事業與財富：** 分析一生事業高度、適合行業及財庫狀況。\n"
+                                    "3. **感情與人際：** 解讀正緣特徵、感情模式及與他人互動的盲點。\n"
+                                    "4. **人生大運/長期趨勢：** 概括一生中重要的起伏階段與轉折年份建議。\n"
+                                    "5. **開運建議：** 提供五行調整或心理層面的轉念建議。\n\n"
+                                    f"**數據資訊：**\n{get_data_string(1)}"
+                                )
+                            else:
+                                system_prompt = "你是一位精通東西方運算邏輯的「現代決策精算師」。你的任務是將複雜的古典波斯占星與八字數據，轉化為一份零術語、純結果的現代生活運勢報告。"
+                                user_prompt = (
+                                    "**任務 (Task)：** 請根據以下提供的「本命與流年數據」，直接輸出年度運勢結果。\n\n"
+                                    "**嚴格要求：**\n"
+                                    "1. 禁止 出現任何術數名詞（例如：法達、小限、傷官、偏印、宮位、相位等）。\n"
+                                    "2. 禁止 解釋推導過程，只需要給出最終的趨勢判斷與建議。\n"
+                                    "3. 語氣 必須專業、果斷、具備現代感，像是一份商業決策摘要。\n\n"
+                                    "**輸出格式 (Format)：**\n"
+                                    "請統一使用以下模塊進行輸出：\n"
+                                    "📊 年度核心摘要（一句話總結）\n"
+                                    "1. 事業職場 (Career) - 核心走向 / 關鍵機會 / 競爭力\n"
+                                    "2. 財運表現 (Wealth) - 收入預測 / 投資與偏財 / 財務預警\n"
+                                    "3. 家庭關係 (Family) - 內部氛圍 / 家庭事務\n"
+                                    "4. 愛情對象 (Relationship) - 現狀預測 / 溝通焦點\n"
+                                    "5. 健康狀態 (Health) - 身心預測 / 生活建議\n"
+                                    "6. 意外與風險 (Risks) - 風險預警 / 高風險時段\n"
+                                    "💡 最終行動指南 - 條列式提供 3 個建議\n\n"
+                                    f"**數據資訊：**\n{get_data_string(2)}"
+                                )
+                            
+                            # 呼叫 Grok API
+                            response = client.chat.completions.create(
+                                model="grok-2-latest", 
+                                messages=[
+                                    {"role": "system", "content": system_prompt},
+                                    {"role": "user", "content": user_prompt}
+                                ]
+                            )
+                            
+                            st.markdown(response.choices[0].message.content)
+                        except Exception as e:
+                            st.error(f"Grok API 分析發生錯誤：{e}")
+
+    else: st.error("請在側邊欄輸入正確的地點名稱。")
+except Exception as e: st.info(f"請在側邊欄輸入完整的出生及流運資料。")
