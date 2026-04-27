@@ -7,7 +7,8 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 from lunar_python import Solar
-import google.generativeai as genai
+# 引入 openai 套件來呼叫 Grok API
+from openai import OpenAI
 
 # 引入繪圖
 try:
@@ -202,8 +203,8 @@ now_dt = datetime.datetime.now()
 
 with st.sidebar:
     st.title("⚙️ 參數設定")
-    st.subheader("🔑 AI 設定")
-    gemini_key = st.text_input("Gemini API Key", type="password", help="請輸入你的 Google AI Studio API Key")
+    st.subheader("🔑 AI 設定 (Grok)")
+    grok_key = st.text_input("Grok API Key", type="password", help="請輸入你的 xAI Grok API Key")
     
     st.divider()
     st.subheader("👶 本命資料")
@@ -303,55 +304,4 @@ try:
             
             if mode == 2:
                 _, zr_l1, zr_l2 = get_zr_table(lots_raw['精神點 (Spirit)'], base_birth_dt, age_exact)
-                txt += f"\n【流運與預測】\n流運日期：{t_date_in}\n小限：{prof_sign}年，主星 {prof_ruler}\n法達：{f_maj}-{f_sub}\n黃道釋放(Spirit)：L1-{zr_l1}, L2-{zr_l2}\n"
-                txt += "\n【日返盤】\n"
-                for p in sr_p_data: txt += f"{p['星體']}：{p['星座'].split(' ')[0]} {p['宮位']}\n"
-                txt += "\n【流運日弧】\n"
-                for a in sa_aspects: txt += f"{a['行星A']}{a['相位']}{a['行星B']} {a['出/入相']}\n"
-                txt += "\n【八字大運流年】\n"
-                dy_now = [dy for dy in da_yuns if dy.getStartYear() <= int(t_date_in[:4]) < dy.getStartYear()+10]
-                if dy_now: txt += f"目前大運：{dy_now[0].getGanZhi()}\n流年：{t_date_in[:4]}年\n"
-            return txt
-
-        # --- 📋 複製給 AI 分頁 ---
-        with tabs[4]:
-            ai_copy_mode = st.radio("複製模式", ["僅限本命盤數據", "包含占星及八字數據"], horizontal=True)
-            st.code(get_data_string(1 if ai_copy_mode == "僅限本命盤數據" else 2), language="plaintext")
-
-        # --- 🤖 AI 命理分析分頁 (核心新增) ---
-        with tabs[3]:
-            st.markdown("### 🤖 AI 智慧命理諮詢")
-            if not gemini_key:
-                st.warning("請先在側邊欄輸入 Gemini API Key 才能使用 AI 分析功能。")
-            else:
-                ai_option = st.radio("請選擇分析類型", ["1. 本命全方位格局分析", "2. 年度決策精算報告"], horizontal=True)
-                
-                if st.button("🚀 開始 AI 分析"):
-                    with st.spinner("AI 大師正在研讀你的命盤，請稍候..."):
-                        try:
-                            genai.configure(api_key=gemini_key)
-                            model = genai.GenerativeModel('gemini-pro')
-                            
-                            if ai_option == "1. 本命全方位格局分析":
-                                prompt = f"""
-                                **角色 (Persona)：** 你是一位精通東方傳統「子平八字」與西方「現代占星學」的資深命理大師。
-                                **任務 (Task)：** 請根據以下資訊，進行一次全方位的「一生整體格局解讀」。
-                                **數據資訊：**\n{get_data_string(1)}
-                                **輸出格式：** 請依照「核心格局」、「事業與財富」、「感情與人際」、「人生大運/長期趨勢」、「開運建議」五個章節撰寫報告。
-                                """
-                            else:
-                                prompt = f"""
-                                **角色 (Persona)：** 你是一位精通東西方運算邏輯的「現代決策精算師」。
-                                **任務 (Task)：** 轉化為一份零術語、純結果的現代生活年度運勢報告。
-                                **數據資訊：**\n{get_data_string(2)}
-                                **嚴格要求：** 禁止出現術數名詞，禁止解釋過程，語氣果斷專業。
-                                **輸出格式：** 請統一使用「📊 年度核心摘要」、「1. 事業職場」、「2. 財運表現」、「3. 家庭關係」、「4. 愛情對象」、「5. 健康狀態」、「6. 意外與風險」、「💡 最終行動指南」模塊。
-                                """
-                            
-                            response = model.generate_content(prompt)
-                            st.markdown(response.text)
-                        except Exception as e:
-                            st.error(f"AI 分析發生錯誤：{e}")
-
-    else: st.error("請在側邊欄輸入正確的地點名稱。")
-except Exception as e: st.info(f"請在側邊欄輸入完整的出生及流運資料。")
+                txt += f"\n【流運與預測】\n流運日期：{t_date_in}\n小限：{prof_sign}年，主星 {prof_ruler}\
