@@ -7,6 +7,7 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 from lunar_python import Solar
+# 引入 Google Gemini 套件
 import google.generativeai as genai
 
 # 引入繪圖
@@ -584,9 +585,15 @@ try:
 
             return txt
 
-        # --- 🤖 AI 命理分析分頁 (Gemini 版) ---
+        # --- 🤖 AI 命理分析分頁 (支援狀態暫存與下載功能) ---
         with tab_ai:
             st.markdown("### 🤖 AI 智慧命理諮詢 (Powered by Gemini)")
+            
+            # 【核心機制】初始化 session_state，讓生成的報告可以常駐並被下載
+            if "ai_report_content" not in st.session_state:
+                st.session_state.ai_report_content = None
+                st.session_state.ai_report_filename = "AI_Report.txt"
+                
             if not gemini_key:
                 st.warning("請先在側邊欄輸入 Google Gemini API Key 才能使用 AI 分析功能。")
             else:
@@ -598,7 +605,7 @@ try:
                             # 初始化 Gemini 模型
                             genai.configure(api_key=gemini_key)
                             
-                            # 【核心修正】改用目前官方預設且最穩定、快速的 gemini-1.5-flash 模型
+                            # 使用你名單中強大且支援的 2.5-flash 模型
                             model = genai.GenerativeModel('gemini-2.5-flash')
                             
                             if ai_option == "1. 本命全方位格局分析":
@@ -618,6 +625,7 @@ try:
                                     "5. **開運建議：** 提供五行調整或心理層面的轉念建議。\n\n"
                                     f"**數據資訊：**\n{get_data_string(1)}"
                                 )
+                                file_name = f"本命全方位格局分析_{date_in}.txt"
                             else:
                                 prompt = (
                                     "**角色 (Persona)：** 你是一位精通東西方運算邏輯的「現代決策精算師」。你的任務是將複雜的古典波斯占星與八字數據，轉化為一份零術語、純結果的現代生活運勢報告。\n\n"
@@ -638,25 +646,31 @@ try:
                                     "💡 最終行動指南 - 條列式提供 3 個建議\n\n"
                                     f"**數據資訊：**\n{get_data_string(2)}"
                                 )
+                                file_name = f"年度決策精算報告_{t_date_in}.txt"
                             
                             response = model.generate_content(prompt)
                             
-                            # 安全讀取回應內容
+                            # 將結果儲存到 session_state 中，避免重整消失
                             if response and hasattr(response, 'text') and response.text:
-                                st.markdown(response.text)
+                                st.session_state.ai_report_content = response.text
+                                st.session_state.ai_report_filename = file_name
                             else:
                                 st.error(f"⚠️ API 請求成功，但未能產生文字。原始錯誤: {response}")
                                 
                         except Exception as e:
-                            # 自動攔截並提示可用的模型
-                            if "404" in str(e):
-                                try:
-                                    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-                                    st.error(f"⚠️ 找不到指定的模型。這可能是因為地區限制或套件版本較舊。\n\n你的 API Key 目前有權限使用的模型清單為：\n{', '.join(available_models)}\n\n(請將程式碼中的 `gemini-1.5-flash` 替換為上方其中一個名稱即可。)")
-                                except:
-                                    st.error(f"⚠️ 模型錯誤：{e}")
-                            else:
-                                st.error(f"⚠️ Gemini API 分析發生錯誤：{e}")
+                            st.error(f"⚠️ Gemini API 分析發生錯誤：{e}")
+
+                # 只要 session_state 裡面有報告內容，就顯示在畫面上，並提供下載按鈕
+                if st.session_state.ai_report_content:
+                    st.success("✅ 報告生成成功！您可以點擊下方按鈕將報告存為文字檔。")
+                    st.download_button(
+                        label="📥 下載分析報告 (TXT)",
+                        data=st.session_state.ai_report_content,
+                        file_name=st.session_state.ai_report_filename,
+                        mime="text/plain"
+                    )
+                    st.markdown("---")
+                    st.markdown(st.session_state.ai_report_content)
 
         # --- 📋 複製給 AI 分頁 ---
         with tab4:
