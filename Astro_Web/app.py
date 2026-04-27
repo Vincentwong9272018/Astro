@@ -7,7 +7,8 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 from lunar_python import Solar
-from openai import OpenAI
+# 引入 Google Gemini 套件
+import google.generativeai as genai
 
 # 引入繪圖
 try:
@@ -287,8 +288,8 @@ now_dt = datetime.datetime.now()
 
 with st.sidebar:
     st.title("⚙️ 參數設定")
-    st.subheader("🔑 AI 設定 (Grok)")
-    grok_key = st.text_input("Grok API Key", type="password", help="請輸入你的 xAI Grok API Key")
+    st.subheader("🔑 AI 設定 (Gemini)")
+    gemini_key = st.text_input("Gemini API Key", type="password", help="請輸入你的 Google AI Studio API Key")
     
     st.divider()
     st.subheader("👶 本命資料")
@@ -466,7 +467,7 @@ try:
             except Exception as e:
                 st.error(f"八字計算發生錯誤: {e}")
 
-        # ================= 核心字串產生器 =================
+        # ================= 核心字串產生器 (安全換行) =================
         def get_data_string(mode):
             txt = f"【基本資料】\n性別：{gender_in}\n出生時間：{y}年{m}月{d}日 {h:02d}:{mi:02d}\n出生地點：{loc_in}\n\n"
             
@@ -584,25 +585,25 @@ try:
 
             return txt
 
-        # --- 🤖 AI 命理分析分頁 (安全處理版) ---
+        # --- 🤖 AI 命理分析分頁 (Gemini 版) ---
         with tab_ai:
-            st.markdown("### 🤖 AI 智慧命理諮詢 (Powered by Grok)")
-            if not grok_key:
-                st.warning("請先在側邊欄輸入 Grok API Key 才能使用 AI 分析功能。")
+            st.markdown("### 🤖 AI 智慧命理諮詢 (Powered by Gemini)")
+            if not gemini_key:
+                st.warning("請先在側邊欄輸入 Google Gemini API Key 才能使用 AI 分析功能。")
             else:
                 ai_option = st.radio("請選擇分析類型", ["1. 本命全方位格局分析", "2. 年度決策精算報告"], horizontal=True)
                 
                 if st.button("🚀 開始 AI 分析"):
-                    with st.spinner("Grok 正在研讀你的命盤數據，請稍候..."):
+                    with st.spinner("Gemini 正在研讀你的命盤數據，請稍候..."):
                         try:
-                            client = OpenAI(
-                                api_key=grok_key,
-                                base_url="https://api.xai.com/v1",
-                            )
+                            # 初始化 Gemini 模型
+                            genai.configure(api_key=gemini_key)
+                            # 推薦使用 gemini-1.5-pro 處理複雜邏輯與長文本
+                            model = genai.GenerativeModel('gemini-1.5-pro')
                             
                             if ai_option == "1. 本命全方位格局分析":
-                                system_prompt = "你是一位精通東方傳統「子平八字」與西方「現代占星學」的資深命理大師。你擅長揉合東西方命理精髓，透過八字的五行能量與占星的行星相位，為客戶提供既有哲學深度又具備實際指導意義的人生解讀。"
-                                user_prompt = (
+                                prompt = (
+                                    "**角色 (Persona)：** 你是一位精通東方傳統「子平八字」與西方「現代占星學」的資深命理大師。你擅長揉合東西方命理精髓，透過八字的五行能量與占星的行星相位，為客戶提供既有哲學深度又具備實際指導意義的人生解讀。\n\n"
                                     "**任務 (Task)：** 請根據以下提供的客戶出生資訊，進行一次全方位的「一生整體格局解讀」。你需要識別命盤中的核心矛盾、天賦潛能、以及人生各階段的重要轉折點。\n\n"
                                     "**情境與細節 (Context)：**\n"
                                     "1. 解讀對象為我的客戶，請保持專業、中立且富有同理心的口吻。\n"
@@ -618,8 +619,8 @@ try:
                                     f"**數據資訊：**\n{get_data_string(1)}"
                                 )
                             else:
-                                system_prompt = "你是一位精通東西方運算邏輯的「現代決策精算師」。你的任務是將複雜的古典波斯占星與八字數據，轉化為一份零術語、純結果的現代生活運勢報告。"
-                                user_prompt = (
+                                prompt = (
+                                    "**角色 (Persona)：** 你是一位精通東西方運算邏輯的「現代決策精算師」。你的任務是將複雜的古典波斯占星與八字數據，轉化為一份零術語、純結果的現代生活運勢報告。\n\n"
                                     "**任務 (Task)：** 請根據以下提供的「本命與流年數據」，直接輸出年度運勢結果。\n\n"
                                     "**嚴格要求：**\n"
                                     "1. 禁止 出現任何術數名詞（例如：法達、小限、傷官、偏印、宮位、相位等）。\n"
@@ -638,24 +639,16 @@ try:
                                     f"**數據資訊：**\n{get_data_string(2)}"
                                 )
                             
-                            response = client.chat.completions.create(
-                                model="grok-2-latest", 
-                                messages=[
-                                    {"role": "system", "content": system_prompt},
-                                    {"role": "user", "content": user_prompt}
-                                ]
-                            )
+                            response = model.generate_content(prompt)
                             
-                            # 【核心修復區】安全讀取 API 回應，避免出現 NoneType 崩潰
-                            if hasattr(response, 'choices') and response.choices:
-                                st.markdown(response.choices[0].message.content)
-                            elif isinstance(response, dict) and 'choices' in response and response['choices']:
-                                st.markdown(response['choices'][0]['message']['content'])
+                            # 安全讀取回應內容
+                            if response and hasattr(response, 'text') and response.text:
+                                st.markdown(response.text)
                             else:
-                                st.error(f"⚠️ Grok API 請求成功，但未能取得分析結果。API 回傳了異常狀態（可能是餘額不足或模型維護中）。\n\n**原始錯誤訊息：**\n{response}")
+                                st.error("⚠️ API 請求成功，但未能產生文字（可能觸發了安全過濾機制）。")
                                 
                         except Exception as e:
-                            st.error(f"⚠️ API 呼叫過程發生錯誤：{e}")
+                            st.error(f"⚠️ Gemini API 分析發生錯誤：{e}")
 
         # --- 📋 複製給 AI 分頁 ---
         with tab4:
