@@ -356,7 +356,7 @@ try:
         lots_table, lots_raw = calculate_lots(n_draw_pos, n_ascmc[0], n_cusps)
         trees = get_midpoint_trees(n_draw_pos, orb_limit=orb_mid)
 
-        # ================= 分頁數據區 (已完整還原 9 個分頁) =================
+        # ================= 分頁數據區 =================
         st.divider()
         tab1, tab2, tab3, tab5, tab6, tab7, tab_bazi, tab_ai, tab4 = st.tabs([
             "🪐 本命盤", "☀️ 日返盤", "☀️ 流運日弧", "🏛️ 希臘七大點", "🌳 中點樹", "⏳ 預測與流運", "☯️ 八字排盤", "🤖 AI 命理分析", "📋 複製給 AI"
@@ -466,7 +466,7 @@ try:
             except Exception as e:
                 st.error(f"八字計算發生錯誤: {e}")
 
-        # ================= 核心字串產生器 (安全換行版，避免 SyntaxError) =================
+        # ================= 核心字串產生器 =================
         def get_data_string(mode):
             txt = f"【基本資料】\n性別：{gender_in}\n出生時間：{y}年{m}月{d}日 {h:02d}:{mi:02d}\n出生地點：{loc_in}\n\n"
             
@@ -584,7 +584,7 @@ try:
 
             return txt
 
-        # --- 🤖 AI 命理分析分頁 (Grok 版) ---
+        # --- 🤖 AI 命理分析分頁 (安全處理版) ---
         with tab_ai:
             st.markdown("### 🤖 AI 智慧命理諮詢 (Powered by Grok)")
             if not grok_key:
@@ -646,9 +646,16 @@ try:
                                 ]
                             )
                             
-                            st.markdown(response.choices[0].message.content)
+                            # 【核心修復區】安全讀取 API 回應，避免出現 NoneType 崩潰
+                            if hasattr(response, 'choices') and response.choices:
+                                st.markdown(response.choices[0].message.content)
+                            elif isinstance(response, dict) and 'choices' in response and response['choices']:
+                                st.markdown(response['choices'][0]['message']['content'])
+                            else:
+                                st.error(f"⚠️ Grok API 請求成功，但未能取得分析結果。API 回傳了異常狀態（可能是餘額不足或模型維護中）。\n\n**原始錯誤訊息：**\n{response}")
+                                
                         except Exception as e:
-                            st.error(f"Grok API 分析發生錯誤：{e}")
+                            st.error(f"⚠️ API 呼叫過程發生錯誤：{e}")
 
         # --- 📋 複製給 AI 分頁 ---
         with tab4:
