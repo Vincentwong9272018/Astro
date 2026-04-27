@@ -599,7 +599,7 @@ try:
                             # 初始化 Gemini 模型
                             genai.configure(api_key=gemini_key)
                             # 推薦使用 gemini-1.5-pro 處理複雜邏輯與長文本
-                            model = genai.GenerativeModel('gemini-1.5-pro')
+                            model = genai.GenerativeModel('gemini-1.5-pro-latest')
                             
                             if ai_option == "1. 本命全方位格局分析":
                                 prompt = (
