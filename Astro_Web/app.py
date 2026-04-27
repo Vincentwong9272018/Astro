@@ -599,7 +599,7 @@ try:
                             genai.configure(api_key=gemini_key)
                             
                             # 【核心修正】改用目前官方預設且最穩定、快速的 gemini-1.5-flash 模型
-                            model = genai.GenerativeModel('gemini-1.5-flash')
+                            model = genai.GenerativeModel('gemini-2.5-flash')
                             
                             if ai_option == "1. 本命全方位格局分析":
                                 prompt = (
