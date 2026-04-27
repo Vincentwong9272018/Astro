@@ -1,10 +1,11 @@
 streamlit
+lunar_python
 swisseph
 pytz
 pandas
 geopy
 timezonefinder
-lunar_python
 matplotlib
 Pillow
 numpy
+openai
