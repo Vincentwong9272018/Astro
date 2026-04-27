@@ -7,7 +7,6 @@ import pandas as pd
 from geopy.geocoders import Nominatim
 from timezonefinder import TimezoneFinder
 from lunar_python import Solar
-# 引入 Google Gemini 套件
 import google.generativeai as genai
 
 # 引入繪圖
@@ -599,8 +598,8 @@ try:
                             # 初始化 Gemini 模型
                             genai.configure(api_key=gemini_key)
                             
-                            # 【核心修正】使用全球最通用的 gemini-pro 模型，徹底避免 404 報錯
-                            model = genai.GenerativeModel('gemini-pro')
+                            # 【核心修正】改用目前官方預設且最穩定、快速的 gemini-1.5-flash 模型
+                            model = genai.GenerativeModel('gemini-1.5-flash')
                             
                             if ai_option == "1. 本命全方位格局分析":
                                 prompt = (
@@ -649,7 +648,15 @@ try:
                                 st.error(f"⚠️ API 請求成功，但未能產生文字。原始錯誤: {response}")
                                 
                         except Exception as e:
-                            st.error(f"⚠️ Gemini API 分析發生錯誤：{e}")
+                            # 自動攔截並提示可用的模型
+                            if "404" in str(e):
+                                try:
+                                    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+                                    st.error(f"⚠️ 找不到指定的模型。這可能是因為地區限制或套件版本較舊。\n\n你的 API Key 目前有權限使用的模型清單為：\n{', '.join(available_models)}\n\n(請將程式碼中的 `gemini-1.5-flash` 替換為上方其中一個名稱即可。)")
+                                except:
+                                    st.error(f"⚠️ 模型錯誤：{e}")
+                            else:
+                                st.error(f"⚠️ Gemini API 分析發生錯誤：{e}")
 
         # --- 📋 複製給 AI 分頁 ---
         with tab4:
