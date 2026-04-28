@@ -1,6 +1,6 @@
 streamlit
 lunar_python
-swisseph
+pyswisseph
 pytz
 pandas
 geopy
