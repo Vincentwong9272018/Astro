@@ -1,7 +1,10 @@
 import streamlit as st
 import os
 import datetime
-import swisseph as swe
+try:
+    import swisseph as swe
+except ImportError:
+    import pyeph as swe
 import pytz
 import pandas as pd
 from geopy.geocoders import Nominatim
