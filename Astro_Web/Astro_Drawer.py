@@ -1,4 +1,7 @@
-import swisseph as swe
+try:
+    import swisseph as swe
+except ImportError:
+    import pyeph as swe
 import numpy as np
 import matplotlib.pyplot as plt
 import io
