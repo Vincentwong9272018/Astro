@@ -1,7 +1,9 @@
 streamlit
-pyswisseph-cffi
+pyswisseph-fallback
 geopy
 timezonefinder
 pytz
 matplotlib
 numpy
+google-generativeai
+lunar-python
